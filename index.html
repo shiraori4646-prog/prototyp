@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GOGO TOWN - ファッション通販サイト</title>
+  <style>
+    /* 全体設定 */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", YakuHanJP, "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+
+    /* 1. 暗幕（同意するまで操作不可） */
+    #overlay-lock {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.65);
+      z-index: 9998;
+    }
+
+    /* 2. 上部固定バナー（基本スタイル） */
+    .top-banner-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background-color: #ffffff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      z-index: 9999;
+      padding: 20px 0;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-100%); }
+      to { transform: translateY(0); }
+    }
+
+    .banner-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .banner-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #333;
+      max-width: 650px;
+    }
+
+    .banner-text strong {
+      font-size: 15px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    /* --- パターン別スタイル定義 --- */
+
+    /* Pattern A: 対等パターン (全く同じデザイン) */
+    .pattern-equal {
+      border-bottom: 4px solid #333;
+    }
+    .pattern-equal .btn-equal-agree,
+    .pattern-equal .btn-equal-decline {
+      background-color: #333333;
+      color: #ffffff;
+      border: none;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 110px;
+      text-align: center;
+    }
+
+    /* Pattern B: 非対称パターン (同意を極端に強調) */
+    .pattern-asymmetric {
+      border-bottom: 4px solid #000;
+    }
+    .pattern-asymmetric .btn-asym-agree {
+      background-color: #000000;
+      color: #ffffff;
+      border: none;
+      padding: 14px 36px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .pattern-asymmetric .btn-asym-decline {
+      background-color: transparent;
+      color: #aaa;
+      border: none;
+      padding: 6px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* Pattern C: 階層化パターン (設定ボタン経由) */
+    .pattern-hierarchical {
+      border-bottom: 4px solid #555;
+    }
+    .pattern-hierarchical .btn-hie-agree {
+      background-color: #111;
+      color: #fff;
+      border: none;
+      padding: 11px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .pattern-hierarchical .btn-hie-settings {
+      background-color: #f0f0f0;
+      color: #444;
+      border: 1px solid #ccc;
+      padding: 11px 18px;
+      font-size: 13px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Pattern D: 警告・圧迫型パターン */
+    .pattern-warning {
+      border-bottom: 5px solid #d90429;
+      background-color: #fff5f5;
+    }
+    .pattern-warning .banner-text strong {
+      color: #d90429;
+    }
+    .pattern-warning .btn-warn-agree {
+      background-color: #d90429;
+      color: #ffffff;
+      border: none;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .pattern-warning .btn-warn-decline {
+      background-color: transparent;
+      color: #666;
+      border: 1px solid #bbb;
+      padding: 12px 18px;
+      font-size: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* 階層化用：Cookie詳細設定モーダル */
+    #settings-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 480px;
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 10000;
+      display: none;
+    }
+    #settings-modal h3 {
+      margin-top: 0;
+      font-size: 16px;
+    }
+    #settings-modal p {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.5;
+    }
+    .modal-btn-group {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* ヘッダー＆サイトデザイン */
+    header {
+      background-color: #111111;
+      color: #ffffff;
+      padding: 16px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 3px;
+    }
+    .search-container {
+      flex-grow: 1;
+      max-width: 400px;
+      margin: 0 30px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: none;
+      background-color: #222;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    nav {
+      display: flex;
+      gap: 20px;
+    }
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .main-content {
+      max-width: 1100px;
+      margin: 30px auto;
+      padding: 0 20px 80px 20px;
+    }
+    .hero-banner {
+      width: 100%;
+      height: 180px;
+      background: linear-gradient(135deg, #111111 0%, #333333 100%);
+      color: #fff;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+    .hero-banner h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 2px;
+    }
+    .hero-banner p {
+      margin: 8px 0 0 0;
+      font-size: 14px;
+      color: #ff3366;
+      font-weight: bold;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      border-left: 4px solid #111;
+      padding-left: 10px;
+    }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      margin-bottom: 50px;
+    }
+    .product-card {
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .product-img-wrapper {
+      width: 100%;
+      height: 220px;
+      background-color: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    .product-img-wrapper img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .product-info {
+      padding: 14px;
+    }
+    .brand-name {
+      font-size: 11px;
+      color: #888;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .product-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #222;
+      margin: 0 0 8px 0;
+      line-height: 1.4;
+      height: 36px;
+      overflow: hidden;
+    }
+    .product-price {
+      font-size: 15px;
+      font-weight: bold;
+      color: #e63946;
+    }
+
+    /* デバッグ用ログ画面表示 */
+    #debug-log {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.9);
+      color: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      z-index: 10001;
+      display: none;
+    }
+  </style>
+</head>
+<body id="page-body" style="overflow: hidden;">
+
+  <!-- 背景暗幕 -->
+  <div id="overlay-lock"></div>
+
+  <!-- 同意バナー本体 -->
+  <div id="banner-modal" class="top-banner-modal">
+    <div class="banner-container">
+      <div class="banner-text">
+        <strong id="banner-title">規約およびCookieの設定</strong>
+        <p id="banner-desc" style="margin:0;">内容を確認し、進んでください。</p>
+      </div>
+      <div id="btn-group-container" class="btn-group">
+        <!-- JSでパターンに応じたボタン群を動的生成 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 階層化（Pattern C）用設定モーダル -->
+  <div id="settings-modal">
+    <h3>Cookie詳細設定</h3>
+    <p>当サイトではサービス改善および広告配信のためにCookieを使用しています。特定のトラッキングCookieを無効化（拒否）することができます。</p>
+    <div class="modal-btn-group">
+      <button id="modal-decline-btn" style="padding: 8px 16px; background: #eee; border: 1px solid #ccc; cursor: pointer;">拒否して適用</button>
+      <button id="modal-agree-btn" style="padding: 8px 16px; background: #111; color: #fff; border: none; cursor: pointer;">すべて許可</button>
+    </div>
+  </div>
+
+  <!-- GOGO TOWN ショッピングサイト -->
+  <header>
+    <div class="logo">GOGO TOWN</div>
+    <div class="search-container">
+      <input type="text" class="search-input" placeholder="パーカー、パンツ、ブランド名で探す">
+    </div>
+    <nav>
+      <a href="#">お気に入り</a>
+      <a href="#">カート(0)</a>
+      <a href="#">ログイン</a>
+    </nav>
+  </header>
+
+  <div class="main-content">
+    <div class="hero-banner">
+      <h1>GOGO AUTUMN & WINTER SALE</h1>
+      <p>対象のパーカー・アウターアイテムが最大70%OFF！</p>
+    </div>
+
+    <!-- セクション1：トップス -->
+    <div class="section-title">人気のパーカー・トップス</div>
+    <div class="product-grid">
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="pa-ka-.png" alt="パーカー">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">GOGO CASUAL</div>
+          <p class="product-title">ヘビーウェイト ビッグシルエット スウェットパーカー</p>
+          <div class="product-price">¥4,950</div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="jipa-ka-.jpg" alt="ジップパーカー">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">URBAN STYLE</div>
+          <p class="product-title">裏起毛 スタンダード ジップアップパーカー</p>
+          <div class="product-price">¥5,800</div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="suwe.jpg" alt="スウェット">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">STREET LAB</div>
+          <p class="product-title">ワンポイントロゴクルーネックスウェット</p>
+          <div class="product-price">¥3,990</div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="ront.png" alt="ロンT">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">GOGO CASUAL</div>
+          <p class="product-title">コットン100% ルーズシルエット ロングTシャツ</p>
+          <div class="product-price">¥2,750</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- セクション2：ボトムス -->
+    <div class="section-title">人気のパンツ・ボトムス</div>
+    <div class="product-grid">
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="pant.jpg" alt="イージーパンツ">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">DENIM&CO.</div>
+          <p class="product-title">レギュラーフィット イージー ワークパンツ</p>
+          <div class="product-price">¥6,200</div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="ji-nzu.png" alt="デニムジーンズ">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">URBAN STYLE</div>
+          <p class="product-title">ヴィンテージウォッシュ テーパードデニムジーンズ</p>
+          <div class="product-price">¥7,900</div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="tino.png" alt="チノパンツ">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">GOGO BASIC</div>
+          <p class="product-title">ストレッチスリム チノパンツ</p>
+          <div class="product-price">¥4,500</div>
+        </div>
+      </div>
+      <div class="product-card">
+        <div class="product-img-wrapper">
+          <img src="suwepn.png" alt="スウェットパンツ">
+        </div>
+        <div class="product-info">
+          <div class="brand-name">STREET LAB</div>
+          <p class="product-title">サイドライン ジョガー スウェットパンツ</p>
+          <div class="product-price">¥5,100</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 計測結果表示領域 -->
+  <div id="debug-log">
+    <strong>【実験計測ログ】</strong>
+    <div id="log-pattern" style="margin-top: 4px;">割り当て: -</div>
+    <div id="log-action" style="margin-top: 2px;">選択: -</div>
+    <div id="log-time" style="margin-top: 2px;">反応時間: - ms</div>
+  </div>
+
+  <script>
+    let startTime = 0;
+    let assignedPattern = '';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. 25%ずつの確率で4パターンからランダム割り当て
+      const rand = Math.random();
+      if (rand < 0.25) {
+        assignedPattern = 'Pattern_A_Equal'; // 対等
+      } else if (rand < 0.50) {
+        assignedPattern = 'Pattern_B_Asymmetric'; // 非対称
+      } else if (rand < 0.75) {
+        assignedPattern = 'Pattern_C_Hierarchical'; // 階層化
+      } else {
+        assignedPattern = 'Pattern_D_Warning'; // 警告・圧迫
+      }
+
+      const bannerModal = document.getElementById('banner-modal');
+      const bannerTitle = document.getElementById('banner-title');
+      const bannerDesc = document.getElementById('banner-desc');
+      const btnContainer = document.getElementById('btn-group-container');
+
+      // 2. パターンに応じたUIの初期化
+      if (assignedPattern === 'Pattern_A_Equal') {
+        // ① 対等パターン
+        bannerModal.className = 'top-banner-modal pattern-equal';
+        bannerTitle.textContent = 'GOGO TOWN 利用規約およびCookieの設定';
+        bannerDesc.textContent = '当サイトでは、サービスの向上および利便性向上のためにCookieを使用しています。';
+        btnContainer.innerHTML = `
+          <button id="agree-btn" class="btn-equal-agree">同意する</button>
+          <button id="decline-btn" class="btn-equal-decline">拒否する</button>
+        `;
+      } 
+      else if (assignedPattern === 'Pattern_B_Asymmetric') {
+        // ② 非対称パターン
+        bannerModal.className = 'top-banner-modal pattern-asymmetric';
+        bannerTitle.textContent = 'GOGO TOWN 利用規約およびCookieの使用について';
+        bannerDesc.textContent = '当サイトでは快適なショッピング体験の提供のためCookieを使用します。';
+        btnContainer.innerHTML = `
+          <button id="agree-btn" class="btn-asym-agree">同意して進む</button>
+          <button id="decline-btn" class="btn-asym-decline">拒否する</button>
+        `;
+      } 
+      else if (assignedPattern === 'Pattern_C_Hierarchical') {
+        // ③ 階層化パターン
+        bannerModal.className = 'top-banner-modal pattern-hierarchical';
+        bannerTitle.textContent = 'GOGO TOWN プライバシー・Cookie設定';
+        bannerDesc.textContent = '最適な情報提供のためCookieを使用しています。設定の変更は詳細設定より行えます。';
+        btnContainer.innerHTML = `
+          <button id="agree-btn" class="btn-hie-agree">すべて同意する</button>
+          <button id="settings-btn" class="btn-hie-settings">詳細設定</button>
+        `;
+      } 
+      else if (assignedPattern === 'Pattern_D_Warning') {
+        // ④ 警告・圧迫パターン
+        bannerModal.className = 'top-banner-modal pattern-warning';
+        bannerTitle.textContent = '【重要】サービス利用に関するセキュリティと規定同意の確認';
+        bannerDesc.textContent = '【注意】Cookieおよびデータ取得を無効化した場合、商品の閲覧・カート追加・決済機能などのサービスが正しく動作しない可能性があります。';
+        btnContainer.innerHTML = `
+          <button id="agree-btn" class="btn-warn-agree">理解してすべて同意する</button>
+          <button id="decline-btn" class="btn-warn-decline">同意せずに進む</button>
+        `;
+      }
+
+      // イベントリスナーの登録
+      attachEventListeners();
+
+      // 計測開始 (ミリ秒単位)
+      startTime = performance.now();
+    });
+
+    function attachEventListeners() {
+      // 同意ボタン
+      const agreeBtn = document.getElementById('agree-btn');
+      if (agreeBtn) {
+        agreeBtn.addEventListener('click', () => handleResponse('Agree'));
+      }
+
+      // 拒否ボタン
+      const declineBtn = document.getElementById('decline-btn');
+      if (declineBtn) {
+        declineBtn.addEventListener('click', () => handleResponse('Decline'));
+      }
+
+      // 階層化パターンの設定ボタン
+      const settingsBtn = document.getElementById('settings-btn');
+      if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+          // 詳細設定モーダルを表示
+          document.getElementById('settings-modal').style.display = 'block';
+        });
+      }
+
+      // モーダル内の同意・拒否ボタン
+      const modalAgreeBtn = document.getElementById('modal-agree-btn');
+      if (modalAgreeBtn) {
+        modalAgreeBtn.addEventListener('click', () => handleResponse('Agree_via_Settings'));
+      }
+
+      const modalDeclineBtn = document.getElementById('modal-decline-btn');
+      if (modalDeclineBtn) {
+        modalDeclineBtn.addEventListener('click', () => handleResponse('Decline_via_Settings'));
+      }
+    }
+
+    // レスポンス処理・ロック解除・ログ記録
+    function handleResponse(actionType) {
+      const endTime = performance.now();
+      const reactionTime = Math.round(endTime - startTime);
+
+      // UI表示のクリアと画面ロック解除
+      document.getElementById('overlay-lock').style.display = 'none';
+      document.getElementById('banner-modal').style.display = 'none';
+      document.getElementById('settings-modal').style.display = 'none';
+      document.getElementById('page-body').style.overflow = 'auto'; // スクロール有効化
+
+      // 画面右下に実験用ログを表示
+      document.getElementById('log-pattern').textContent = `割り当て: ${assignedPattern}`;
+      document.getElementById('log-action').textContent = `選択: ${actionType}`;
+      document.getElementById('log-time').textContent = `反応時間: ${reactionTime} ms (${(reactionTime/1000).toFixed(2)}秒)`;
+      document.getElementById('debug-log').style.display = 'block';
+
+      console.log(`[DATA] Pattern: ${assignedPattern} | Action: ${actionType} | Time: ${reactionTime}ms`);
+    }
+  </script>
+</body>
+</html>
